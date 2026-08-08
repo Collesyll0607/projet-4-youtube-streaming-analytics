@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Real-Time Streaming & Analytics (Kafka / Snowflake)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon youtube-red"><i class="fa-brands fa-youtube"></i></div>
+                <div class="brand-text">
+                    <h2>YouTube Stream</h2>
+                    <span>Kafka & Snowflake DW</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#live" class="nav-link active"><i class="fa-solid fa-satellite-dish"></i> Stream en Direct</a>
+                <a href="#analytics" class="nav-link"><i class="fa-solid fa-chart-line"></i> Analytics Kafka</a>
+                <a href="#sentiment" class="nav-link"><i class="fa-solid fa-comments"></i> Sentiments</a>
+                <a href="#snowflake" class="nav-link"><i class="fa-solid fa-snowflake"></i> Snowflake DW</a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">C</div>
+                <div class="info">
+                    <span class="name">User: Colle</span>
+                    <span class="role">Data Engineer</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h1>Pipeline Streaming YouTube Data v3</h1>
+                    <p>Ingestion Kafka en temps réel • Traitement Hive • Entrepôt Cloud Snowflake (Compte: <code>Colle</code>)</p>
+                </div>
+                <div class="stream-status-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="streamStatusText">Kafka Producer: ACTIF</span>
+                </div>
+            </header>
+
+            <!-- KPI Summary Cards -->
+            <section class="kpi-grid">
+                <div class="kpi-card glass">
+                    <div class="kpi-icon red"><i class="fa-solid fa-eye"></i></div>
+                    <div class="kpi-data">
+                        <span class="kpi-title">Vues Cumulées (Stream)</span>
+                        <h3 id="kpiViews">458,920</h3>
+                        <span class="kpi-trend positive"><i class="fa-solid fa-arrow-trend-up"></i> +12,400 / min</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass">
+                    <div class="kpi-icon pink"><i class="fa-solid fa-thumbs-up"></i></div>
+                    <div class="kpi-data">
+                        <span class="kpi-title">Likes Ingérés</span>
+                        <h3 id="kpiLikes">34,180</h3>
+                        <span class="kpi-trend positive"><i class="fa-solid fa-heart"></i> 7.4% Taux Engagement</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass">
+                    <div class="kpi-icon green"><i class="fa-solid fa-face-smile"></i></div>
+                    <div class="kpi-data">
+                        <span class="kpi-title">Sentiment Positif</span>
+                        <h3 id="kpiSentiment">84.2 %</h3>
+                        <span class="kpi-trend positive"><i class="fa-solid fa-check"></i> 1,840 Commentaires</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass">
+                    <div class="kpi-icon blue"><i class="fa-solid fa-snowflake"></i></div>
+                    <div class="kpi-data">
+                        <span class="kpi-title">Snowflake Warehouse</span>
+                        <h3>YOUTUBE_WH</h3>
+                        <span class="kpi-trend neutral"><i class="fa-solid fa-database"></i> DB: YOUTUBE_DB</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Real-time Live Kafka Feed Ticker -->
+            <section class="ticker-section glass">
+                <div class="ticker-header">
+                    <h3><i class="fa-solid fa-terminal"></i> Journal du Flux Kafka en Direct (Topics: <code>youtube-videos-raw</code> & <code>youtube-comments-raw</code>)</h3>
+                    <button class="btn-simulation" onclick="toggleStream()"><i class="fa-solid fa-pause" id="playPauseIcon"></i> Pause Flux</button>
+                </div>
+                <div class="ticker-box" id="tickerBox">
+                    <!-- Dynamic live logs injected via JS -->
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-grid">
+                <div class="chart-card glass">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-area"></i> Vélocité d'Ingestion des Vues par Catégorie</h3>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card glass">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-pie-chart"></i> Distribution du Sentiment des Commentaires</h3>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="sentimentChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Trending Videos Leaderboard -->
+            <section class="table-section glass">
+                <div class="table-header">
+                    <h3><i class="fa-solid fa-fire"></i> Top Vidéos Tendances en Cours de Streaming</h3>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" placeholder="Filtrer par titre ou chaîne..." onkeyup="filterVideos()">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Vidéo</th>
+                                <th>Chaîne YouTube</th>
+                                <th>Catégorie</th>
+                                <th>Vues</th>
+                                <th>Likes</th>
+                                <th>Taux Engagement</th>
+                                <th>Score Sentiment</th>
+                            </tr>
+                        </thead>
+                        <tbody id="videoTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
