@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Stream Analytics — Kafka, Hive & Snowflake DW | Collé Syll</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Manrope', sans-serif; background-color: #080c14; color: #f9fafb; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping"></span>
+      <div>
+        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+          🔴 Pipeline Streaming YouTube Analytics — Kafka, Hive &amp; Snowflake
+        </h1>
+        <p class="text-xs text-slate-400 mono">
+          Snowflake Account: <span class="text-emerald-400">kyykmpb-lu82975</span> | User: <span class="text-amber-400">COLLE</span> | DB: <span class="text-sky-400">YOUTUBE_DATA_WH</span>
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="toggleStreamBtn" onclick="toggleStream()" class="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition">
+        ⏸ Pause Stream Kafka
+      </button>
+      <a href="https://github.com/Collesyll0607/projet-4-youtube-streaming-analytics" target="_blank" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+        Code Source GitHub ↗
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-8 flex-1">
+    <!-- KPIs -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 uppercase mono">Vues Cumulées Stream</span>
+        <div id="kpiViews" class="text-2xl sm:text-3xl font-extrabold text-red-400 mt-1 mono">397,900</div>
+        <span class="text-xs text-emerald-400 mt-1 block">+14,200 / min (Topic: youtube-videos-raw)</span>
+      </div>
+      <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 uppercase mono">Likes Cumulés</span>
+        <div id="kpiLikes" class="text-2xl sm:text-3xl font-extrabold text-red-400 mt-1 mono">29,700</div>
+        <span class="text-xs text-emerald-400 mt-1 block">+850 / min</span>
+      </div>
+      <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 uppercase mono">Taux d'Engagement Moyen</span>
+        <div id="kpiEngagement" class="text-2xl sm:text-3xl font-extrabold text-amber-400 mt-1 mono">7.68 %</div>
+        <span class="text-xs text-slate-400 mt-1 block">Cible analytique : 7.4 %</span>
+      </div>
+      <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 uppercase mono">Entrepôt Snowflake</span>
+        <div class="text-xl sm:text-2xl font-extrabold text-sky-400 mt-1 mono">YOUTUBE_DATA_WH</div>
+        <span class="text-xs text-emerald-400 mt-1 block">WH: COMPUTE_WH • Schéma Étoile</span>
+      </div>
+    </section>
+
+    <!-- Live Kafka Stream Logs + Filter -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 mono">
+            ⚡ Journal du Flux Kafka Live (`youtube-comments-raw`)
+          </h2>
+          <span id="streamBadge" class="px-2.5 py-0.5 rounded-full text-[11px] mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            STREAMING ACTIF
+          </span>
+        </div>
+        <pre id="kafkaLogs" class="p-4 rounded-xl bg-black/70 border border-slate-800 text-xs text-emerald-300 mono overflow-x-auto h-48 leading-relaxed"></pre>
+      </div>
+
+      <!-- Architecture Modèle en Étoile Snowflake -->
+      <div class="lg:col-span-5 p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 mono">
+          ❄️ Modélisation Dimensionnelle (Schéma en Étoile)
+        </h2>
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs mono space-y-2">
+          <div class="p-2.5 rounded-lg bg-sky-950/60 border border-sky-700/50 text-sky-200">
+            <strong>Fact_Youtube</strong> (Fact_ID, Video_ID, Channel_ID, Time_ID, View_Count, Like_Count, Comment_Count, Engagement_Rate)
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">
+              <strong>Dim_Video</strong><br/>Video_ID, Title, Category
+            </div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">
+              <strong>Dim_Channel</strong><br/>Channel_ID, Channel_Name
+            </div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">
+              <strong>Dim_Time</strong><br/>Time_ID, Jour, Heure
+            </div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">
+              <strong>Staging Hive</strong><br/>Export CSV &amp; Partition
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table & Filtre par Catégorie -->
+    <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-extrabold text-white">📊 Table Analytique `Fact_Youtube` &amp; Analyse de Sentiment NLP</h2>
+          <p class="text-xs text-slate-400">Filtrez les vidéos collectées via l'API YouTube Data v3 et enrichies par le pipeline Python</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label for="catFilter" class="text-xs text-slate-400 mono">Catégorie :</label>
+          <select id="catFilter" onchange="renderTable()" class="bg-slate-800 text-white text-xs rounded-xl px-3 py-2 border border-slate-700">
+            <option value="ALL">Toutes les catégories</option>
+            <option value="Science & Tech">Science &amp; Tech</option>
+            <option value="Éducation">Éducation</option>
+            <option value="Événements">Événements</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-xs uppercase mono text-slate-400">
+              <th class="py-3 px-3">Video_ID</th>
+              <th class="py-3 px-3">Titre de la Vidéo</th>
+              <th class="py-3 px-3">Chaîne (`Dim_Channel`)</th>
+              <th class="py-3 px-3">Catégorie</th>
+              <th class="py-3 px-3">Vues</th>
+              <th class="py-3 px-3">Likes</th>
+              <th class="py-3 px-3">Engagement</th>
+              <th class="py-3 px-3">Sentiment NLP</th>
+            </tr>
+          </thead>
+          <tbody id="videoTableBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-800 py-5 px-6 text-center text-xs text-slate-500">
+    Projet 4 Data Engineering réalisé par <strong>Collé Syll</strong> — <a href="https://collesyll0607.github.io/" class="text-emerald-400 hover:underline">Retour au Portfolio</a>
+  </footer>
+
+  <script>
+    const videos = [
+      { video_id: "dQw4w9WgXcQ", title: "Tutoriel Data Engineering Kafka & Snowflake", channel: "Tech Data Academy", category: "Science & Tech", views: 145200, likes: 11400, engagement: 8.8, sentiment: "POSITIVE" },
+      { video_id: "9bZkp7q19f0", title: "IA Générative et Big Data en 2026", channel: "Data World TV", category: "Science & Tech", views: 98400, likes: 7200, engagement: 7.9, sentiment: "POSITIVE" },
+      { video_id: "L_LUpnjgPso", title: "Architecture Snowflake Data Warehouse", channel: "Cloud Data Hub", category: "Éducation", views: 64100, likes: 5100, engagement: 8.4, sentiment: "POSITIVE" },
+      { video_id: "kJQP7kiw5Fk", title: "Top 5 Frameworks Big Data : Spark vs Hive", channel: "Code & Bytes", category: "Éducation", views: 52000, likes: 3900, engagement: 7.5, sentiment: "POSITIVE" },
+      { video_id: "3JZ_D3ELwOQ", title: "Conférence Live : Scaling Real-Time Pipelines", channel: "Big Data Summit", category: "Événements", views: 38200, likes: 2100, engagement: 5.8, sentiment: "NEUTRAL" }
+    ];
+
+    let streaming = true;
+    let totalViews = 397900;
+    let totalLikes = 29700;
+
+    function renderTable() {
+      const cat = document.getElementById("catFilter").value;
+      const tbody = document.getElementById("videoTableBody");
+      const filtered = cat === "ALL" ? videos : videos.filter(v => v.category === cat);
+      tbody.innerHTML = filtered.map(v => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-3 px-3 mono text-xs text-slate-400">${v.video_id}</td>
+          <td class="py-3 px-3 font-semibold text-white">${v.title}</td>
+          <td class="py-3 px-3 text-slate-300">${v.channel}</td>
+          <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-xs">${v.category}</span></td>
+          <td class="py-3 px-3 mono">${v.views.toLocaleString('fr-FR')}</td>
+          <td class="py-3 px-3 mono">${v.likes.toLocaleString('fr-FR')}</td>
+          <td class="py-3 px-3 mono font-bold text-amber-400">${v.engagement} %</td>
+          <td class="py-3 px-3">
+            <span class="px-2.5 py-0.5 rounded-full text-xs mono font-bold ${v.sentiment === 'POSITIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300'}">${v.sentiment}</span>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    const sampleMessages = [
+      "[youtube-comments-raw] @DevData: 'Super explication de la table Fact_Youtube sur Snowflake !' (Sentiment: POSITIVE, Score: 0.92)",
+      "[youtube-videos-raw] Ingestion batch Kafka -> Hive staging_youtube_videos.csv (+145 vues)",
+      "[youtube-comments-raw] @DataEng_SN: 'Pipeline Kafka + Snowflake très fluide !' (Sentiment: POSITIVE, Score: 0.95)",
+      "[snowflake-connector] INSERT INTO Fact_Youtube VALUES ('fact_live', 'dQw4w9WgXcQ', 'COMPUTE_WH') OK"
+    ];
+
+    function appendLog() {
+      if (!streaming) return;
+      const logsEl = document.getElementById("kafkaLogs");
+      const now = new Date().toLocaleTimeString('fr-FR');
+      const msg = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
+      logsEl.textContent = `[${now}] ${msg}\n` + logsEl.textContent;
+      totalViews += Math.floor(Math.random() * 90) + 15;
+      totalLikes += Math.floor(Math.random() * 12) + 2;
+      document.getElementById("kpiViews").textContent = totalViews.toLocaleString('fr-FR');
+      document.getElementById("kpiLikes").textContent = totalLikes.toLocaleString('fr-FR');
+    }
+
+    function toggleStream() {
+      streaming = !streaming;
+      document.getElementById("toggleStreamBtn").textContent = streaming ? "⏸ Pause Stream Kafka" : "▶️ Reprendre Stream Kafka";
+      const badge = document.getElementById("streamBadge");
+      badge.textContent = streaming ? "STREAMING ACTIF" : "EN PAUSE";
+      badge.className = streaming
+        ? "px-2.5 py-0.5 rounded-full text-[11px] mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+        : "px-2.5 py-0.5 rounded-full text-[11px] mono bg-amber-500/20 text-amber-300 border border-amber-500/30";
+    }
+
+    renderTable();
+    appendLog();
+    appendLog();
+    setInterval(appendLog, 2800);
+  </script>
+</body>
+</html>
