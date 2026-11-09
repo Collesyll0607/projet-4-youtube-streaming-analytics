@@ -1,3 +1,9 @@
+﻿> 🌐 **Démo Interactive Déployée en Ligne :** [**https://collesyll0607.github.io/projet-4-youtube-streaming-analytics/**](https://collesyll0607.github.io/projet-4-youtube-streaming-analytics/)
+>
+> 👩‍💻 **Portfolio de l'Auteure (Collé Syll) :** [https://collesyll0607.github.io/](https://collesyll0607.github.io/)
+
+---
+
 # 🔴 Projet 4 : Pipeline Streaming & Analytics YouTube (Kafka, Hive & Snowflake)
 
 [![GitHub User](https://img.shields.io/badge/GitHub-Collesyll0607-blue?logo=github)](https://github.com/Collesyll0607)
@@ -41,3 +47,4 @@ Interface Kafka-UI disponible sur `http://localhost:8080`.
 
 ## 👤 Auteur
 - **GitHub** : [@Collesyll0607](https://github.com/Collesyll0607)
+
